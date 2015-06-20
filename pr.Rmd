@@ -1,0 +1,196 @@
+---
+  
+title: "Machine Learning Course Project"
+
+author: "Reinhard Schlager"
+
+date: "Friday, June 19, 2015"
+
+output: html_document
+
+---
+  
+  
+  
+  This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown
+
+see <http://rmarkdown.rstudio.com>.
+
+
+
+When you click the **Knit** button a document will be generated that includesboth content as well as the output of any embedded R code chunks within thedocument. You can embed an R code chunk like this:
+  
+  
+  
+  
+  
+  ##loading caret
+  
+  ```{r}
+
+library(caret)
+
+```
+
+
+
+##loading data set
+
+```{r}
+
+pml.training <- read.csv("~/R/machinelearning/pml-training.csv")
+pml.testing <- read.csv("~/R/machinelearning/pml-testing.csv")
+```
+
+
+
+##eliminate descriptive columns
+
+```{r}
+
+pml.training<-pml.training[ ,!names(pml.training) == 'user_name']
+
+pml.training<-pml.training[ ,!names(pml.training) == 'raw_timestamp_part_1']
+
+pml.training<-pml.training[ ,!names(pml.training) == 'raw_timestamp_part_2']
+
+pml.training<-pml.training[ ,!names(pml.training) == 'cvtd_timestamp']
+
+pml.training<-pml.training[ ,!names(pml.training) == 'new_window']
+
+pml.training<-pml.training[ ,!names(pml.training) == 'num_window']
+
+pml.training<-pml.training[ ,!names(pml.training) == 'X']
+
+
+
+pml.testing<-pml.testing[ ,!names(pml.testing) == 'user_name']
+
+pml.testing<-pml.testing[ ,!names(pml.testing) == 'raw_timestamp_part_1']
+
+pml.testing<-pml.testing[ ,!names(pml.testing) == 'raw_timestamp_part_2']
+
+pml.testing<-pml.testing[ ,!names(pml.testing) == 'cvtd_timestamp']
+
+pml.testing<-pml.testing[ ,!names(pml.testing) == 'new_window']
+
+pml.testing<-pml.testing[ ,!names(pml.testing) == 'num_window']
+
+pml.testing<-pml.testing[ ,!names(pml.testing) == 'X']
+
+
+
+
+
+pml.testing <- pml.testing[ , ! apply(pml.testing ,2 ,function(x) any(is.na(x)) ) ]
+
+pml.training <- pml.training[ , ! apply(pml.training ,2 ,function(x) any(is.na(x)) ) ]
+
+
+
+```
+
+
+
+##find out relevant fields
+
+```{r}
+
+nzvcol <- nearZeroVar(pml.training, saveMetrics=TRUE)
+
+```
+
+
+
+##reduce training data to relvant fields
+
+
+
+```{r}
+
+pml.training<-pml.training[,nzvcol$nzv==FALSE & nzvcol$zeroVar==FALSE]
+
+```
+
+
+
+##split in training and testing data
+
+```{r}
+
+inTrain<-createDataPartition(pml.training$classe,p=0.7,list=FALSE)
+
+training<-pml.training[inTrain,]
+
+training$classe <-factor(training$classe)
+
+testing<-pml.training[-inTrain,]
+
+```
+
+## build the model with randfom forest
+
+```{r}
+
+modFit<-train(classe~.,method="rf",data=training)
+
+
+
+```
+
+
+
+
+
+##Model validation on training set
+
+```{r}
+
+pred_training <- predict(modFit, training)
+
+print(confusionMatrix(pred_training,training$classe))
+
+```
+
+
+
+##Model validation on Test data
+
+
+```{r}
+
+pred_testing <- predict(modFit, testing)
+
+print(confusionMatrix(pred_testing,testing$classe))
+```
+
+
+
+
+##Predict on new Test set
+
+
+
+```{r}
+
+pred_testset <- predict(modFit, pml.testing)
+
+pred_testset
+
+```
+
+##generate result files
+
+```{r}
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("~/R/machinelearning/problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+pml_write_files(pred_testset)
+
+```
+
+
